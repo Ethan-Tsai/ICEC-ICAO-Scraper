@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICEC ESG 航班碳排自動化系統</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #0f766e;  /* ESG Green / Teal */
+            --accent-hover: #115e59;
+            --accent-light: #f0fdfa;
+            --success: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --warning-light: #fffbeb;
+        }
+        body { 
+            margin: 0; padding: 2rem; 
+            font-family: 'Noto Sans TC', 'Inter', sans-serif; 
+            background: var(--bg); color: var(--text-main); 
+            min-height: 100vh;
+        }
+        .container { max-width: 950px; margin: auto; }
+        .header { margin-bottom: 2rem; text-align: center; }
+        .header h1 { font-size: 2.2rem; font-weight: 700; margin: 0 0 0.5rem 0; color: var(--accent); letter-spacing: -0.5px;}
+        .header p { color: var(--text-muted); font-size: 1.1rem; margin: 0; font-weight: 500;}
+        
+        .card { 
+            background: var(--surface); 
+            border: 1px solid var(--border); 
+            border-radius: 20px; 
+            padding: 2rem; 
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.04); 
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .card h2 { margin-top: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;}
+        
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; }
+        input { 
+            width: 100%; box-sizing: border-box; 
+            padding: 12px 16px; border-radius: 12px; 
+            border: 1px solid var(--border); 
+            font-size: 1rem; color: var(--text-main); 
+            background: #fdfdfd; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+        
+        .btn-group { display: flex; gap: 1rem; }
+        button { 
+            flex: 1; padding: 14px 20px; 
+            border-radius: 12px; border: none; 
+            font-size: 1.05rem; font-weight: 700; 
+            cursor: pointer; transition: all 0.2s; 
+            display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+            font-family: inherit;
+        }
+        .btn-start { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2); }
+        .btn-start:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-stop { background: white; color: var(--danger); border: 2px solid #fecaca; }
+        .btn-stop:hover:not(:disabled) { border-color: var(--danger); background: #fef2f2; }
+        
+        /* Premium Explainable Status Banner */
+        .status-banner { 
+            display: flex; align-items: center; justify-content: flex-start; gap: 1.5rem; 
+            padding: 2rem; background: var(--accent-light); 
+            border-radius: 16px; border: 1px solid rgba(15, 118, 110, 0.1);
+        }
+        .status-text { font-size: 1.25rem; font-weight: 700; color: var(--accent); line-height: 1.5; }
+        .status-sub { display: block; font-size: 0.95rem; font-weight: 500; opacity: 0.8; margin-top: 4px; }
+        
+        /* Spinner */
+        .spinner {
+            width: 32px; height: 32px;
+            border: 4px solid rgba(15, 118, 110, 0.2);
+            border-bottom-color: var(--accent);
+            border-radius: 50%;
+            display: none;
+            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Data Result Card */
+        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1rem; }
+        .data-box { background: var(--bg); padding: 1.5rem; border-radius: 16px; text-align: center; border: 1px solid var(--border); }
+        .data-label { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .data-val { color: var(--text-main); font-size: 1.8rem; font-weight: 700; font-family: 'Inter', sans-serif;}
+        .data-unit { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+
+        /* Table Design */
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #ffffff;
+            position: relative;
+        }
+        .table-container::-webkit-scrollbar { width: 8px; }
+        .table-container::-webkit-scrollbar-track { background: transparent; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 2px solid #ffffff; }
+
+        .live-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+        .live-table th {
+            position: sticky;
+            top: 0;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+        .live-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: background 0.3s ease;
+        }
+        .row-active {
+            background-color: var(--warning-light) !important;
+            animation: pulseBg 2s infinite ease-in-out;
+        }
+        .row-done {
+            background: #ffffff;
+            color: var(--success);
+        }
+        .row-idle {
+            color: var(--text-muted);
+        }
+        @keyframes pulseBg {
+            0% { background-color: var(--warning-light); }
+            50% { background-color: #fef08a; }
+            100% { background-color: var(--warning-light); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-done { background: #d1fae5; color: #059669; }
+        .badge-active { background: #fef3c7; color: #b45309; }
+        .badge-idle { background: #f1f5f9; color: #94a3b8; }
+
+        details { background: var(--surface); padding: 1rem; border-radius: 16px; border: 1px solid var(--border); margin-top: 1rem;}
+        summary { cursor: pointer; color: var(--text-muted); font-weight: 600; outline: none; user-select: none; }
+        .terminal { 
+            background: #f1f5f9; color: #334155; 
+            font-family: 'Consolas', monospace; 
+            padding: 1.2rem; border-radius: 12px; 
+            max-height: 250px; overflow-y: auto; font-size: 0.85rem; 
+            border: 1px solid var(--border); margin-top: 1rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body onload="loadPreview()">
+    <div class="container">
+        <div class="header">
+            <h1>ICAO航班碳排自動化爬蟲系統</h1>
+            <p>為避免被偵測爬蟲，會花較長時間模擬/等待-可分段重啟</p>
+        </div>
+
+        <div class="card">
+            <h2>🎯 控制選項</h2>
+            <div class="form-group">
+                <label>目標航線清單檔案 (List.csv)</label>
+                <div style="display:flex; gap: 8px;">
+                    <input type="text" id="csvPath" value="configs/List.csv" style="flex:1;" readonly>
+                    <button onclick="browseFile()" style="flex:0; white-space:nowrap; background: var(--accent); color: white; padding: 0 20px; font-weight: 600;">📂 瀏覽檔案</button>
+                    <button onclick="loadPreview()" style="flex:0; white-space:nowrap; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); padding: 0 16px;">🔄 載入預覽</button>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-start" id="startBtn" onclick="startBot()">
+                    ▶ 開始爬蟲
+                </button>
+                <button class="btn-stop" id="stopBtn" onclick="stopBot()">
+                    ⏹ 暫時中斷與儲存(可隨時繼續開爬)
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>當前系統狀態</h2>
+            <div class="status-banner" id="statusBanner">
+                <div class="spinner" id="spinner"></div>
+                <div>
+                    <div class="status-text" id="statusText">系統等待中，隨時可啟動。</div>
+                    <div class="status-sub" id="statusSub">請設定好 CSV 清單後，點擊上方「開始爬蟲」啟動無頭瀏覽器。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最新一筆的華麗資料展示 -->
+        <div class="card" id="latestResultCard" style="display: none; border-left: 6px solid var(--success);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>📊 最新一筆擷取結果</h2>
+                <div style="background: #d1fae5; color: #059669; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">即時更新</div>
+            </div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;" id="latestRoute">-- -> --</div>
+            <div class="result-grid">
+                <div class="data-box">
+                    <div class="data-label">航線距離 (Distance)</div>
+                    <div class="data-val" id="latestDist">--<span class="data-unit"> km</span></div>
+                </div>
+                <div class="data-box" style="border-color: rgba(15,118,110,0.3); background: var(--accent-light);">
+                    <div class="data-label" style="color: var(--accent)">總油耗 (Fuel Burn)</div>
+                    <div class="data-val" style="color: var(--accent)" id="latestFuel">--<span class="data-unit"> kg</span></div>
+                </div>
+                <div class="data-box">
+                    <div class="data-label">碳排放 (Passengers CO2)</div>
+                    <div class="data-val" style="color: var(--success);" id="latestCO2">--<span class="data-unit"> kg</span></div>
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1.5rem; text-align: right;">已成功寫入硬碟 JSON 與 CSV。</div>
+        </div>
+
+        <!-- 全自動化追蹤網格 -->
+        <div class="card">
+            <h2>📋 動態航線任務追蹤表</h2>
+            <div class="table-container">
+                <table class="live-table">
+                    <thead>
+                        <tr>
+                            <th>狀態</th>
+                            <th>航班路線</th>
+                            <th>距離 (km)</th>
+                            <th>碳排 (kg)</th>
+                            <th style="color:var(--accent);">油耗 (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">請點擊「載入預覽」讀取清單。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 一鍵匯出報表 -->
+        <div class="card" style="margin-top: 1.5rem; background: var(--bg);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; color: var(--text-main);">💾 匯出與下載最終報表</h2>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">系統逐筆防呆寫入，您隨時可取得最新成果。</div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <a href="/api/download/csv" download="ICEC_Flight_Emissions.csv" target="_blank" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='var(--surface)'" style="flex: 1; text-align: center; background: var(--surface); color: var(--accent); border: 2px solid var(--accent); padding: 12px 20px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s;">
+                    ⬇️ 下載 Excel / CSV 數據報表
+                </a>
+                <a href="/api/download/json" download="ICEC_Flight_Emissions.json" target="_blank" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='var(--surface)'" style="flex: 1; text-align: center; background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.2s;">
+                    { } 下載系統 JSON 原始檔
+                </a>
+            </div>
+        </div>
+
+        <!-- 把純工程日誌藏進展開選單中 -->
+        <details>
+            <summary>開啟詳細背景log (修程式再打開)</summary>
+            <div class="terminal" id="term"></div>
+        </details>
+    </div>
+
+    <script>
+        const term = document.getElementById('term');
+        const statusText = document.getElementById('statusText');
+        const statusSub = document.getElementById('statusSub');
+        const spinner = document.getElementById('spinner');
+        const startBtn = document.getElementById('startBtn');
+        const banner = document.getElementById('statusBanner');
+        const tableBody = document.getElementById('tableBody');
+        
+        let ws = new WebSocket(`ws://${location.host}/ws`);
+        let currentActiveRow = null;
+
+        function setStatus(mainText, subText, isLoading = false, theme = 'accent') {
+            statusText.innerText = mainText;
+            if (subText) {
+                statusSub.style.display = 'block';
+                statusSub.innerText = subText;
+            } else {
+                statusSub.style.display = 'none';
+            }
+            spinner.style.display = isLoading ? 'block' : 'none';
+            
+            if (theme === 'accent') {
+                statusText.style.color = 'var(--accent)';
+                statusSub.style.color = 'var(--text-muted)';
+                banner.style.background = 'var(--accent-light)';
+                banner.style.borderColor = 'rgba(15, 118, 110, 0.15)';
+                spinner.style.borderBottomColor = 'var(--accent)';
+                spinner.style.borderColor = 'rgba(15, 118, 110, 0.2)';
+            } else if (theme === 'warning') {
+                statusText.style.color = '#b45309';
+                statusSub.style.color = '#92400e';
+                banner.style.background = 'var(--warning-light)';
+                banner.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+                spinner.style.borderBottomColor = 'var(--warning)';
+                spinner.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+            } else if (theme === 'success') {
+                statusText.style.color = 'var(--success)';
+                statusSub.style.color = 'var(--success)';
+                banner.style.background = '#d1fae5';
+                banner.style.borderColor = 'rgba(5, 150, 105, 0.1)';
+            } else if (theme === 'danger') {
+                statusText.style.color = 'var(--danger)';
+                statusSub.style.color = 'var(--danger)';
+                banner.style.background = '#fee2e2';
+                banner.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+            }
+        }
+
+        async function loadPreview() {
+            const csvPath = document.getElementById('csvPath').value;
+            try {
+                const res = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ csv_path: csvPath })
+                });
+                const data = await res.json();
+                
+                tableBody.innerHTML = '';
+                
+                data.targets.forEach(pair => {
+                    const key = `${pair.dep}-${pair.dst}`;
+                    const row = document.createElement('tr');
+                    row.id = `row-${key}`;
+                    
+                    const result = data.results[key];
+                    if (result && result.status === 'ok') {
+                        row.className = 'row-done';
+                        row.innerHTML = `
+                            <td><span class="badge badge-done">✔️ 已儲存</span></td>
+                            <td style="font-weight: 600;">${pair.dep} ➔ ${pair.dst}</td>
+                            <td>${result.dist || '--'}</td>
+                            <td style="color:var(--success); font-weight: 600;">${result.co2 || '--'}</td>
+                            <td style="color:var(--accent); font-weight: 600;">${result.fuel || '--'}</td>
+                        `;
+                    } else if (result && result.status === 'error') {
+                        row.innerHTML = `
+                            <td><span class="badge badge-idle" style="background:#fee2e2;color:#dc2626;">❌ 失敗</span></td>
+                            <td style="font-weight: 600;">${pair.dep} ➔ ${pair.dst}</td>
+                            <td colspan="3" style="color: var(--text-muted);">請查閱日誌或重試</td>
+                        `;
+                    } else {
+                        row.className = 'row-idle';
+                        row.innerHTML = `
+                            <td><span class="badge badge-idle">等待中</span></td>
+                            <td style="font-weight: 600;">${pair.dep} ➔ ${pair.dst}</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        `;
+                    }
+                    tableBody.appendChild(row);
+                });
+
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 2rem;">無法載入目標 CSV，請確認路徑正確。</td></tr>`;
+            }
+        }
+
+        ws.onmessage = (event) => {
+            const msg = event.data;
+            const div = document.createElement('div');
+            
+            if(msg.includes('ERROR') || msg.includes('Failed')) {
+                div.style.color = 'var(--danger)'; 
+                setStatus('系統發生異常！', '請展開下方日誌查看錯誤原因。', false, 'danger');
+            } 
+            else if (msg.includes('SEARCHING_ROUTE:')) {
+                div.style.color = 'var(--text-muted)';
+                const match = msg.match(/SEARCHING_ROUTE: (.*?) -> (.*)/);
+                if (match) {
+                    const dep = match[1].trim();
+                    const dst = match[2].trim();
+                    const route = `${dep} -> ${dst}`;
+                    setStatus(`🔍 正在查詢專案： ${route}`, `無頭機器人正在解析網站並擷取相關欄位，請稍候。`, true, 'accent');
+
+                    // Interactive Grid Pointing Logic
+                    if (currentActiveRow) {
+                        currentActiveRow.classList.remove('row-active');
+                    }
+                    const rowId = `row-${dep}-${dst}`;
+                    const targetRow = document.getElementById(rowId);
+                    if (targetRow) {
+                        targetRow.classList.add('row-active');
+                        currentActiveRow = targetRow;
+                        // Inject UI actively processing
+                        targetRow.innerHTML = `
+                            <td><span class="badge badge-active">👉 處理中...</span></td>
+                            <td style="font-weight: 600;">${dep} ➔ ${dst}</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        `;
+                        // Auto-scroll!
+                        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+            else if (msg.includes('Successfully calculated list target')) {
+                div.style.color = 'var(--success)';
+                // Extract metrics via Regex
+                const routeMatch = msg.match(/target ([A-Z]{3}) -> ([A-Z]{3})/);
+                const distMatch = msg.match(/distance=([\d.]+)km/);
+                const co2Match = msg.match(/CO2=([\d.]+)kg/);
+                const fuelMatch = msg.match(/Fuel=([\d.]+)kg/);
+                
+                if(routeMatch && fuelMatch) {
+                    const dep = routeMatch[1];
+                    const dst = routeMatch[2];
+                    
+                    document.getElementById('latestResultCard').style.display = 'block';
+                    document.getElementById('latestRoute').innerText = `${dep} -> ${dst}`;
+                    document.getElementById('latestDist').innerHTML = `${distMatch ? distMatch[1] : '--'}<span class="data-unit"> km</span>`;
+                    document.getElementById('latestFuel').innerHTML = `${fuelMatch[1]}<span class="data-unit"> kg</span>`;
+                    document.getElementById('latestCO2').innerHTML = `${co2Match ? co2Match[1] : '--'}<span class="data-unit"> kg</span>`;
+
+                    // Update Grid Row visually!
+                    const targetRow = document.getElementById(`row-${dep}-${dst}`);
+                    if(targetRow) {
+                        targetRow.className = 'row-done';
+                        targetRow.innerHTML = `
+                            <td><span class="badge badge-done" style="animation: pulseBg 0.5s;">✔️ 已儲存</span></td>
+                            <td style="font-weight: 600;">${dep} ➔ ${dst}</td>
+                            <td>${distMatch ? distMatch[1] : '--'}</td>
+                            <td style="color:var(--success); font-weight: 600;">${co2Match ? co2Match[1] : '--'}</td>
+                            <td style="color:var(--accent); font-weight: 600;">${fuelMatch[1]}</td>
+                        `;
+                    }
+                }
+
+                setStatus(`✈️ 成功完成查詢`, `系統正在寫入儲存，準備前往下一筆...`, false, 'accent');
+            } 
+            else if (msg.includes('Adaptive rate limit')) {
+                div.style.color = 'var(--warning)'; 
+                const timeMatch = msg.match(/set to ([\d.]+)s/);
+                const seconds = timeMatch ? timeMatch[1] : '--';
+                setStatus(`⏳ 伺服器防護冷卻中...`, `確保機器人不被目標伺服器 WAF 封鎖，將進行智慧迴避倒數 ${seconds} 秒。`, true, 'warning');
+            } 
+            else {
+                div.style.color = '#94a3b8';
+            }
+
+            // Engine exact states
+            if(msg.includes('Initiating Ignition Sequence')) {
+                setStatus('🚀 正在載入無頭瀏覽器與快取...', '將自動偵測目前的紀錄並接續執行。', true, 'accent');
+            } else if (msg.includes('System Stopped') || msg.includes('Engine manually stopped')) {
+                setStatus('⏹️ 作業已暫停 / 完成', '目前的資料均已安全保存於 CSV 報表中！您可以點擊「開始」繼續。', false, 'accent');
+                startBtn.disabled = false;
+                if(currentActiveRow) currentActiveRow.classList.remove('row-active');
+            }
+
+            div.innerText = msg;
+            term.appendChild(div);
+            // Throttle text logging node bounds globally
+            if (term.children.length > 200) { term.removeChild(term.firstChild); }
+            term.scrollTop = term.scrollHeight;
+        };
+
+        ws.onclose = () => {
+             term.innerHTML += '<div style="color:var(--danger)">與本地伺服器連線中斷。</div>';
+             setStatus('伺服器連線已斷開', '如非正常關閉，請重新啟動應用程式。', false, 'danger');
+        };
+
+        async function browseFile() {
+            try {
+                const res = await fetch('/api/select-file');
+                const data = await res.json();
+                if (data.path) {
+                    document.getElementById('csvPath').value = data.path;
+                    loadPreview();
+                }
+            } catch (err) {
+                console.error('File dialog error:', err);
+            }
+        }
+
+        async function startBot() {
+            startBtn.disabled = true;
+            term.innerHTML += '<div style="color:var(--accent);font-weight:700;">===== Initiating Ignition Sequence... =====</div>';
+            setStatus('📡 正在要求引擎啟動...', '此過程正在準備 Python 背景執行緒，請稍等。', true, 'accent');
+            
+            await fetch('/api/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ csv_path: document.getElementById('csvPath').value })
+            });
+        }
+        
+        async function stopBot() {
+            term.innerHTML += '<div style="color:var(--danger);font-weight:700;">發送系統中斷訊號，等待本次防呆儲存...</div>';
+            setStatus('✋ 正在要求安全中斷...', '請稍候，系統在完成最後一筆寫入後即將結束，避免資料損毀。', true, 'warning');
+            await fetch('/api/stop', { method: 'POST' });
+        }
+    </script>
+</body>
+</html>

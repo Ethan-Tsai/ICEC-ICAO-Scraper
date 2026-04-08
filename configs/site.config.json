@@ -1,0 +1,64 @@
+{
+  "target_url": "https://icec.icao.int/calculator",
+  "browser": {
+    "headless": true,
+    "locale": "zh-TW",
+    "timezone_id": "Asia/Taipei",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "accept_language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "rate_limit": {
+    "min_delay_seconds": 12.0,
+    "max_delay_seconds": 22.0,
+    "long_pause_every": 20,
+    "long_pause_seconds": 45.0,
+    "retry_attempts": 2
+  },
+  "api": {
+    "passenger_get_airports_by_departure": "/Home/PassengerGetAirportsByDeparture",
+    "passenger_compute": "/Home/PassengerCompute",
+    "passenger_result": "/Home/PassengerResult"
+  },
+  "fixed_inputs": {
+    "is_round_trip": false,
+    "cabin_class_compute": 0,
+    "number_of_passenger": 1,
+    "cabin_class_result": "Economy",
+    "indicator_result": "Metric"
+  },
+  "run_limits": {
+    "max_departures": null,
+    "max_destinations_per_departure": null,
+    "max_pairs": 3
+  },
+  "selectors": {
+    "passenger_tab": "#passengerButton",
+    "departure_select": "#SelectPassengerDeparture",
+    "departure_select2_trigger": "#select2-SelectPassengerDeparture-container",
+    "select2_open_options": ".select2-container--open .select2-results__option",
+    "destination_select": "#SelectPassengerDestination1",
+    "trip_one_way_button": "#tripSelect button[data-value='One Way']",
+    "passengers_input": "#numberPassengersTextBox",
+    "cabin_select": "#inputCabinClassSelect",
+    "calculate_button": "#calculateButton",
+    "result_root": "#resultDiv",
+    "result_rows": "#resultDiv .result-item-layout",
+    "result_label_in_row": ".result-item-label-layout > label.small-label",
+    "result_value_in_row": ".result-item-value-layout > label.small-label.small-label-normal",
+    "result_metric_economy_container": "#ResultDivPassengerEconomyMetric",
+    "back_button": "#backButton"
+  },
+  "result_mapping": {
+    "target_labels": [
+      "Total passengers’ CO₂/journey",
+      "Total passengers' CO₂/journey",
+      "Total passengers CO₂/journey"
+    ],
+    "distance_labels": [
+      "Distance"
+    ],
+    "fuel_labels": [
+      "Aircraft Fuel Burn/journey"
+    ]
+  }
+}

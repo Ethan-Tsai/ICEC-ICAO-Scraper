@@ -1,0 +1,41 @@
+# Python Environments
+.env
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+# PyInstaller / Build Artifacts
+build/
+dist/
+*.egg-info/
+*.spec
+
+# Project specific outputs & runtime logs
+out/
+crash_log.txt
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
