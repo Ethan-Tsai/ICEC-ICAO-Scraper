@@ -174,31 +174,37 @@
         }
     </style>
 </head>
-<body onload="loadPreview()">
+<body>
     <div class="container">
-        <div class="header">
+        <div class="header" style="position: relative;">
             <h1>ICAO航班碳排自動化爬蟲系統</h1>
             <p>為避免被偵測爬蟲，會花較長時間模擬/等待-可分段重啟</p>
+            <button onclick="killApp()" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'" style="position: absolute; top: 0; right: 0; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.95rem;">❌ 徹底結束程式</button>
         </div>
 
         <div class="card">
-            <h2>🎯 控制選項</h2>
-            <div class="form-group">
-                <label>目標航線清單檔案 (List.csv)</label>
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label style="font-size: 1.15rem; color: var(--accent); font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <span style="background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.9rem;">STEP 1</span> 選擇目標航線清單
+                </label>
                 <div style="display:flex; gap: 8px;">
-                    <input type="text" id="csvPath" value="configs/List.csv" style="flex:1;" readonly>
-                    <button onclick="browseFile()" style="flex:0; white-space:nowrap; background: var(--accent); color: white; padding: 0 20px; font-weight: 600;">📂 瀏覽檔案</button>
-                    <button onclick="loadPreview()" style="flex:0; white-space:nowrap; background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); padding: 0 16px;">🔄 載入預覽</button>
+                    <input type="text" id="csvPath" value="" placeholder="請點擊右方按鈕選擇您的目標 CSV 檔案..." style="flex:1; background: #fff;" readonly>
+                    <button onclick="browseFile()" style="flex:0; white-space:nowrap; background: var(--accent); color: white; padding: 0 24px; font-weight: 700; font-size: 1.05rem;">📂 選取 CSV 檔案(要等一下 選檔案的視窗才會跳出來)</button>
                 </div>
             </div>
             
-            <div class="btn-group">
-                <button class="btn-start" id="startBtn" onclick="startBot()">
-                    ▶ 開始爬蟲
-                </button>
-                <button class="btn-stop" id="stopBtn" onclick="stopBot()">
-                    ⏹ 暫時中斷與儲存(可隨時繼續開爬)
-                </button>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-size: 1.15rem; color: var(--accent); font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
+                    <span style="background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.9rem;">STEP 2</span> 啟動無頭機器人
+                </label>
+                <div class="btn-group">
+                    <button class="btn-start" id="startBtn" onclick="startBot()" disabled style="opacity: 0.4;">
+                        ▶ 啟動分析引擎
+                    </button>
+                    <button class="btn-stop" id="stopBtn" onclick="stopBot()">
+                        ⏹ 暫時中斷與保存
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -238,7 +244,7 @@
         </div>
 
         <!-- 全自動化追蹤網格 -->
-        <div class="card">
+        <div class="card" id="tableCard" style="display: none;">
             <h2>📋 動態航線任務追蹤表</h2>
             <div class="table-container">
                 <table class="live-table">
@@ -259,12 +265,14 @@
         </div>
 
         <!-- 一鍵匯出報表 -->
-        <div class="card" style="margin-top: 1.5rem; background: var(--bg);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0; color: var(--text-main);">💾 匯出與下載最終報表</h2>
+        <div class="card" id="exportCard" style="display: none; margin-top: 1.5rem; background: var(--bg);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <label style="font-size: 1.25rem; color: var(--text-main); font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <span style="background: var(--text-main); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.9rem;">STEP 3</span> 匯出與下載最終報表
+                </label>
                 <div style="font-size: 0.9rem; color: var(--text-muted);">系統逐筆防呆寫入，您隨時可取得最新成果。</div>
             </div>
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <div style="display: flex; gap: 1rem;">
                 <a href="/api/download/csv" download="ICEC_Flight_Emissions.csv" target="_blank" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='var(--surface)'" style="flex: 1; text-align: center; background: var(--surface); color: var(--accent); border: 2px solid var(--accent); padding: 12px 20px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s;">
                     ⬇️ 下載 Excel / CSV 數據報表
                 </a>
@@ -375,6 +383,14 @@
                     }
                     tableBody.appendChild(row);
                 });
+                
+                // Show sections after successful load
+                document.getElementById('tableCard').style.display = 'block';
+                document.getElementById('exportCard').style.display = 'block';
+                
+                // Enable start button
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
 
             } catch (err) {
                 console.error(err);
@@ -392,12 +408,19 @@
             } 
             else if (msg.includes('SEARCHING_ROUTE:')) {
                 div.style.color = 'var(--text-muted)';
-                const match = msg.match(/SEARCHING_ROUTE: (.*?) -> (.*)/);
+                const match = msg.match(/SEARCHING_ROUTE:\s*(?:\[(\d+)\/(\d+)\])?\s*(.*?) -> (.*)/);
                 if (match) {
-                    const dep = match[1].trim();
-                    const dst = match[2].trim();
+                    const cur = match[1];
+                    const tot = match[2];
+                    const dep = match[3].trim();
+                    const dst = match[4].trim();
                     const route = `${dep} -> ${dst}`;
-                    setStatus(`🔍 正在查詢專案： ${route}`, `無頭機器人正在解析網站並擷取相關欄位，請稍候。`, true, 'accent');
+                    
+                    if (cur && tot) {
+                        setStatus(`🔍 正在爬取第 ${cur} / ${tot} 筆任務： ${route}`, `無頭機器人正在解析網站並擷取相關欄位，請稍候。`, true, 'accent');
+                    } else {
+                        setStatus(`🔍 正在查詢專案： ${route}`, `無頭機器人正在解析網站並擷取相關欄位，請稍候。`, true, 'accent');
+                    }
 
                     // Interactive Grid Pointing Logic
                     if (currentActiveRow) {
@@ -488,11 +511,16 @@
 
         async function browseFile() {
             try {
+                // Show picker delay info
+                setStatus('⏳ 正在開啟檔案總管...', '若視窗未顯示，請檢查是否被瀏覽器擋在下方。', true, 'accent');
                 const res = await fetch('/api/select-file');
                 const data = await res.json();
                 if (data.path) {
                     document.getElementById('csvPath').value = data.path;
+                    setStatus('✔️ 已成功選擇檔案', '系統已載入清單，請確認下方表格並點擊「啟動分析引擎」。', false, 'success');
                     loadPreview();
+                } else {
+                    setStatus('系統等待中，隨時可啟動。', '請點擊上方按鈕選擇您的目標 CSV 清單。', false, 'accent');
                 }
             } catch (err) {
                 console.error('File dialog error:', err);
@@ -515,6 +543,14 @@
             term.innerHTML += '<div style="color:var(--danger);font-weight:700;">發送系統中斷訊號，等待本次防呆儲存...</div>';
             setStatus('✋ 正在要求安全中斷...', '請稍候，系統在完成最後一筆寫入後即將結束，避免資料損毀。', true, 'warning');
             await fetch('/api/stop', { method: 'POST' });
+        }
+
+        async function killApp() {
+            if (confirm("確定要立刻強制關閉程式嗎？\n按下確定後，所有背景程序與視窗將被立刻強制切斷不留殘留！")) {
+                document.body.innerHTML = '<h2 style="text-align:center; margin-top:20vh; color:var(--text-muted);">系統已強制終止所有程序。<br><br>您可以安心關閉此視窗了！</h2>';
+                await fetch('/api/kill', { method: 'POST' }).catch(() => {});
+                setTimeout(() => { window.close(); }, 500);
+            }
         }
     </script>
 </body>

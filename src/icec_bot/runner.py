@@ -394,7 +394,7 @@ class IcecRunner:
             pair_idx += 1
             dep_code = pair["dep"]
             dst_code = pair["dst"]
-            logger.info("SEARCHING_ROUTE: %s -> %s", dep_code, dst_code)
+            logger.info("SEARCHING_ROUTE: [%d/%d] %s -> %s", curr_idx, len(pairs), dep_code, dst_code)
             error = ""
             raw_html = ""
             target_label = ""
@@ -440,14 +440,7 @@ class IcecRunner:
                     except Exception as back_exc:
                         logger.warning("Failed to return via back button: %s", back_exc)
             else:
-                logger.error("Failed to calculate list target %s -> %s. Error: %s", dep_code, dst_code, error)
-                if not pair.get("_retried"):
-                    logger.warning("Auto-Retry trigger: Appending %s -> %s to the back of the queue to retry once WAF cools down.", dep_code, dst_code)
-                    pair["_retried"] = True
-                    pairs.append(pair)
-                    continue  # Skip saving the record so it doesn't leave an empty row in CSV
-                else:
-                    logger.error("Permanent Failure: Target %s -> %s failed twice. Skipping permanently.", dep_code, dst_code)
+                logger.error("Permanent Failure: Target %s -> %s failed. Storing as skipped and moving to next.", dep_code, dst_code)
 
             new_rec = RunRecord(
                     departure_code=dep_code,
@@ -455,7 +448,7 @@ class IcecRunner:
                     destination_code=dst_code,
                     destination_text=dst_code,
                     saf_flag="",
-                    status="ok" if not error else "error",
+                    status="ok" if not error else "skipped",
                     target_label_text=target_label,
                     target_value_raw=target_value,
                     target_value_kg=target_kg,

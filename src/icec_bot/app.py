@@ -116,10 +116,17 @@ async def websocket_endpoint(websocket: WebSocket):
         def suicide_check():
             import time
             import os
+            import subprocess
             time.sleep(3)
             # If no active connections are present after 3 seconds, user closed Edge
             if len(manager.active_connections) == 0:
                 print("App window closed. Auto-shutting down background server...")
+                # Kill the scraper task cleanly if possible
+                if global_worker_loop and global_worker_task:
+                    global_worker_loop.call_soon_threadsafe(global_worker_task.cancel)
+                time.sleep(1)
+                # Thermo-nuclear cleanup of the whole process tree to stop Chrome zombies
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(os.getpid())], capture_output=True)
                 os._exit(0)
 
         threading.Thread(target=suicide_check, daemon=True).start()
@@ -186,29 +193,56 @@ async def preview_list(req: StartJobRequest):
     return {"targets": pairs, "results": results_map}
 
 @app.get("/api/select-file")
-async def select_file():
-    """Open a native Windows file dialog silently using PowerShell to avoid Tkinter thread freezing in FastAPI."""
-    import subprocess
-    script = (
-        "Add-Type -AssemblyName System.Windows.Forms; "
-        "$f = New-Object System.Windows.Forms.OpenFileDialog; "
-        "$f.Title = 'Select Target CSV'; "
-        "$f.Filter = 'CSV Files (*.csv)|*.csv|All Files (*.*)|*.*'; "
-        "$f.ShowDialog() | Out-Null; "
-        "$f.FileName"
-    )
+def select_file():
+    """Open a native Windows file dialog silently using CType Win32 API for an instant launch (No Tkinter overhead)."""
+    import ctypes
+    import ctypes.wintypes
     try:
-        # Hide the powershell CMD window
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        GetOpenFileNameW = ctypes.windll.comdlg32.GetOpenFileNameW
+
+        class OPENFILENAME(ctypes.Structure):
+            _fields_ = [
+                ("lStructSize", ctypes.wintypes.DWORD),
+                ("hwndOwner", ctypes.wintypes.HWND),
+                ("hInstance", ctypes.wintypes.HINSTANCE),
+                ("lpstrFilter", ctypes.c_wchar_p),
+                ("lpstrCustomFilter", ctypes.c_wchar_p),
+                ("nMaxCustFilter", ctypes.wintypes.DWORD),
+                ("nFilterIndex", ctypes.wintypes.DWORD),
+                ("lpstrFile", ctypes.c_wchar_p),
+                ("nMaxFile", ctypes.wintypes.DWORD),
+                ("lpstrFileTitle", ctypes.c_wchar_p),
+                ("nMaxFileTitle", ctypes.wintypes.DWORD),
+                ("lpstrInitialDir", ctypes.c_wchar_p),
+                ("lpstrTitle", ctypes.c_wchar_p),
+                ("Flags", ctypes.wintypes.DWORD),
+                ("nFileOffset", ctypes.wintypes.WORD),
+                ("nFileExtension", ctypes.wintypes.WORD),
+                ("lpstrDefExt", ctypes.c_wchar_p),
+                ("lCustData", ctypes.wintypes.LPARAM),
+                ("lpfnHook", ctypes.c_void_p),
+                ("lpTemplateName", ctypes.c_wchar_p),
+                ("pvReserved", ctypes.c_void_p),
+                ("dwReserved", ctypes.wintypes.DWORD),
+                ("FlagsEx", ctypes.wintypes.DWORD)
+            ]
         
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", script],
-            capture_output=True, text=True, startupinfo=startupinfo
-        )
-        file_path = result.stdout.strip()
-        if file_path:
-            return {"path": file_path}
+        ofn = OPENFILENAME()
+        ofn.lStructSize = ctypes.sizeof(OPENFILENAME)
+        ofn.lpstrTitle = "Select Target CSV"
+        ofn.lpstrFilter = "CSV Files\0*.csv\0All Files\0*.*\0\0"
+        
+        buffer = ctypes.create_unicode_buffer(1024)
+        buffer[0] = '\0'
+        ofn.lpstrFile = ctypes.cast(buffer, ctypes.c_wchar_p)
+        ofn.nMaxFile = 1024
+        
+        # OFN_EXPLORER | OFN_FILEMUSTEXIST
+        ofn.Flags = 0x00080000 | 0x00001000
+        
+        if GetOpenFileNameW(ctypes.byref(ofn)):
+            return {"path": buffer.value}
+            
     except Exception as e:
         print("Dialog err:", e)
     return {"path": ""}
@@ -250,3 +284,14 @@ async def stop_scraper():
     if global_worker_loop and global_worker_task:
         global_worker_loop.call_soon_threadsafe(global_worker_task.cancel)
     return {"status": "stopped"}
+
+@app.post("/api/kill")
+async def kill_app():
+    import subprocess
+    import time
+    def _do_kill():
+        time.sleep(0.5)
+        subprocess.run(['taskkill', '/F', '/T', '/PID', str(os.getpid())], capture_output=True)
+        os._exit(0)
+    threading.Thread(target=_do_kill, daemon=True).start()
+    return {"status": "killing"}

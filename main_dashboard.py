@@ -8,7 +8,16 @@ import multiprocessing
 import socket
 import traceback
 import io
+import contextlib
 
+def find_free_port():
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+# Global random port for this specific instance
+APP_PORT = find_free_port()
 # --- PyInstaller noconsole support ---
 # In --noconsole mode, sys.stdout and sys.stderr are None. 
 # Uvicorn explicitly calls sys.stdout.isatty(), causing an AttributeError crash.
@@ -37,11 +46,11 @@ def write_crash_log(msg):
 
 def start_server():
     try:
-        uvicorn.run(fastapi_app, host="127.0.0.1", port=8000, log_level="warning")
+        uvicorn.run(fastapi_app, host="127.0.0.1", port=APP_PORT, log_level="warning")
     except Exception as e:
         write_crash_log(f"Server crashed: {e}\n{traceback.format_exc()}")
 
-def wait_for_server(host="127.0.0.1", port=8000, timeout=15):
+def wait_for_server(host="127.0.0.1", port=APP_PORT, timeout=15):
     """Poll until the server is actually accepting connections, instead of a blind sleep."""
     start = time.time()
     while time.time() - start < timeout:
@@ -65,13 +74,13 @@ def open_browser():
     for path in edge_paths:
         if os.path.exists(path):
             try:
-                subprocess.Popen([path, "--app=http://127.0.0.1:8000", "--window-size=1250,850"])
+                subprocess.Popen([path, f"--app=http://127.0.0.1:{APP_PORT}", "--window-size=1250,850"])
                 return
             except Exception:
                 continue
                 
     import webbrowser
-    webbrowser.open("http://127.0.0.1:8000")
+    webbrowser.open(f"http://127.0.0.1:{APP_PORT}")
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
